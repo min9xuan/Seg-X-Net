@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="b1356906-b418-4558-84f6-fa818907f03d" name="boil">
+        <fileTransfer accessType="SFTP" host="10.146.118.156" port="22" sshConfigId="bf9fb4de-e2e2-4eea-9330-3adeeffa2cdf" sshConfig="ps@10.146.118.156:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
