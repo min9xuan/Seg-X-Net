@@ -68,7 +68,7 @@ def main():
     weight_path = 'params/unet.pth'
     image_dir = 'data/test/image'
     label_dir = 'data/test/labels'
-    result_path = 'result'
+    result_path = 'result/result'
     os.makedirs(result_path, exist_ok=True)
 
     num_classes = 4

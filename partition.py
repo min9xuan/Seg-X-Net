@@ -259,11 +259,11 @@ def draw_region(image_path, point_x=None, point_y=None, is_right_eye=True):
     min_area = 100
     valid_regions = 0
     region_mapping = {}  # 用于存储原始标签到实际区域编号的映射
+    valid_labels = set()  # 存储有效区域的标签
 
+    # 首先处理和标记有效区域
     for i in range(1, num_labels):  # 从1开始，跳过背景
         if stats[i, cv2.CC_STAT_AREA] > min_area:
-            valid_regions += 1
-
             # 获取区域中心点
             center_x = int(centroids[i][0])
             center_y = int(centroids[i][1])
@@ -278,11 +278,23 @@ def draw_region(image_path, point_x=None, point_y=None, is_right_eye=True):
 
             # 如果能够确定区域编号，则保存映射关系
             if actual_region is not None:
+                valid_regions += 1
                 region_mapping[i] = actual_region
-                cv2.putText(output_image, str(actual_region), (center_x, center_y),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+                valid_labels.add(i)
 
-    print(f"图像中共有 {valid_regions} 个独立区域")
+    # 在可视化阶段，处理所有非背景区域
+    for i in range(1, num_labels):
+        # 将所有非背景区域填充为白色
+        output_image[labels == i] = [255, 255, 255]
+        
+        # 只在有效区域上添加编号
+        if i in valid_labels:
+            center_x = int(centroids[i][0])
+            center_y = int(centroids[i][1])
+            cv2.putText(output_image, str(region_mapping[i]), (center_x, center_y),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+
+    print(f"图像中共有 {valid_regions} 个有效区域")
 
     # 如果提供了坐标点，判断点所在的区域
     if point_x is not None and point_y is not None:
@@ -292,7 +304,7 @@ def draw_region(image_path, point_x=None, point_y=None, is_right_eye=True):
             region_label = labels[point_y, point_x]
             if region_label > 0 and region_label in region_mapping:  # 0是背景
                 actual_region = region_mapping[region_label]
-                print(f"坐标点 ({point_x}, {point_y}) 位于区域 {actual_region}")
+                print(f"坐标点 ({point_x}, {point_y}) 位于区域 {actual_region}, 该区域对应{organs[actual_region]}")
                 # 在图像上标记该点
                 cv2.circle(output_image, (point_x, point_y), 3, (0, 0, 255), -1)
             else:
@@ -348,11 +360,9 @@ def draw_region(image_path, point_x=None, point_y=None, is_right_eye=True):
 
 
 def main():
-    img_path = "result/042.jpg"
-    # 在调用函数时提供要检查的坐标点和左右眼参数
-    # 这里的坐标值需要根据实际情况调整
-    draw_region(img_path, point_x=700, point_y=350, is_right_eye=False)
+    img_path = 'result/result/042.jpg'
+    draw_region(img_path, point_x=200, point_y=350, is_right_eye=False)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

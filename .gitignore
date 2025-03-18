@@ -5,7 +5,7 @@ __pycache__/
 data/
 test_result/
 train_image/
-result/*.jpg
+result/
 params/unet.pth
 partition_region.py
 

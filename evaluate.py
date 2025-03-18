@@ -75,6 +75,23 @@ def compute_acc(input, target):
         acc = correct / total
         return acc
 
+def compute_acc_nobg(input, target):
+    if input.dim() > 2:
+        # 如果输入维度大于2（可能包含多个样本），则遍历每个样本计算准确率
+        acc = 0
+        for i in range(input.shape[0]):
+            acc += compute_acc(input[i, ...], target[i, ...])  # 递归计算每个样本的准确率
+        return acc / input.shape[0]
+    else:
+        input = input.cpu().numpy()
+        target = target.cpu().numpy()
+        # 创建非背景像素的掩码
+        non_background_mask = target != 0
+        # 只计算非背景像素的准确率
+        correct = ((input == target) & non_background_mask).sum()
+        total = non_background_mask.sum()
+        acc = correct / total if total > 0 else 0
+        return acc
 
 def compute_kappa(input: Tensor, target: Tensor, num_classes=4, epsilon=1e-6):
     assert input.size() == target.size()
