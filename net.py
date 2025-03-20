@@ -37,9 +37,9 @@ class UpSample(nn.Module):
         super(UpSample, self).__init__()
         self.layer=nn.Conv2d(channel,channel//2,1,1)
     def forward(self,x,feature_map):
-        up=F.interpolate(x,scale_factor=2,mode='bilinear')
-        out=self.layer(up)
-        return torch.cat((out,feature_map),dim=1)  # 跳跃连接，将out和feature_map进行特征融合
+        up = F.interpolate(x, scale_factor=2.0, mode='bilinear')
+        out = self.layer(up)
+        return torch.cat((out, feature_map), dim=1)  # 跳跃连接，将 out 和 feature_map 进行特征融合
 
 
 class UNet(nn.Module):

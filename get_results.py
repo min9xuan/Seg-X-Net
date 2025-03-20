@@ -54,18 +54,24 @@ class TestDataset(Dataset):
 
 # 载入模型
 def load_model(weight_path, num_classes, device):
-    net = UNet(num_classes).to(device)
-    if os.path.exists(weight_path):
-        net.load_state_dict(torch.load(weight_path, map_location=device))
+    try:
+        # 尝试以普通 PyTorch 模型状态字典的方式加载
+        net = UNet(num_classes).to(device)
+        state_dict = torch.load(weight_path, map_location=device, weights_only=True)
+        net.load_state_dict(state_dict)
         print('Model loaded successfully.')
-    else:
-        raise FileNotFoundError(f"Model weights not found at {weight_path}.")
+    except TypeError:
+        # 如果加载失败，尝试以 TorchScript 模型的方式加载
+        net = torch.jit.load(weight_path, map_location=device)
+        print('TorchScript model loaded successfully.')
     return net
 
 # 评估模型
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    weight_path = 'params/unet.pth'
+    # 两种模型加载方式
+    weight_path = 'params/unet.pt'
+    # weight_path = 'params/unet.pth'
     image_dir = 'data/test/image'
     label_dir = 'data/test/labels'
     result_path = 'result/result'

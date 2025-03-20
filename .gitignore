@@ -6,7 +6,7 @@ data/
 test_result/
 train_image/
 result/
-params/unet.pth
+params/
 partition_region.py
 
 # C extensions
