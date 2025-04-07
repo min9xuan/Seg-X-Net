@@ -57,7 +57,7 @@ def load_model(weight_path, num_classes, device):
     try:
         # 尝试以普通 PyTorch 模型状态字典的方式加载
         net = UNet(num_classes).to(device)
-        state_dict = torch.load(weight_path, map_location=device, weights_only=True)
+        state_dict = torch.load(weight_path, map_location=device, weights_only=False)
         net.load_state_dict(state_dict)
         print('Model loaded successfully.')
     except TypeError:
@@ -70,7 +70,7 @@ def load_model(weight_path, num_classes, device):
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # 两种模型加载方式
-    weight_path = 'params/unet.pt'
+    weight_path = 'params/UNet_traced_cuda.pt'
     # weight_path = 'params/unet.pth'
     image_dir = 'data/test/image'
     label_dir = 'data/test/labels'
