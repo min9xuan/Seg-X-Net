@@ -1,5 +1,5 @@
 import os
-
+import argparse
 import tqdm
 from torch import nn, optim
 import torch
@@ -8,52 +8,84 @@ from data import *
 from net import *
 from torchvision.utils import save_image
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-weight_path = 'params/unet.pth'
-data_path = r'data'
-save_path = 'train_image'
-if __name__ == '__main__':
-    num_classes = 3 + 1  # +1是背景也为一类
-    data_loader = DataLoader(MyDataset(data_path), batch_size=2, shuffle=True)
-    net = UNet(num_classes).to(device)
-    if os.path.exists(weight_path):
-        net.load_state_dict(torch.load(weight_path))
-        print('successful load weight！')
+def print_color(text, color="green"):
+    colors = {
+        "green": "\033[92m",
+        "red": "\033[91m",
+        "yellow": "\033[93m",
+        "blue": "\033[94m",
+        "reset": "\033[0m"
+    }
+    print(f"{colors.get(color, '')}{text}{colors['reset']}")
+
+def show_gpu_info():
+    if torch.cuda.is_available():
+        idx = torch.cuda.current_device()
+        name = torch.cuda.get_device_name(idx)
+        mem_allocated = torch.cuda.memory_allocated(idx) / 1024**2  # MB
+        mem_total = torch.cuda.get_device_properties(idx).total_memory / 1024**2  # MB
+        print_color(f"🖥️  GPU: {name} | Allocated: {mem_allocated:.1f}MB / {mem_total:.1f}MB", "yellow")
     else:
-        print('not successful load weight')
+        print_color("🖥️  Running on CPU", "yellow")
+
+def main(args):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print_color(f"Using device: {device}", "yellow")
+
+    data_loader = DataLoader(MyDataset(args.data_path), batch_size=args.batch_size, shuffle=True)
+    net = UNet(args.num_classes).to(device)
+
+    if os.path.exists(args.weight_path):
+        net.load_state_dict(torch.load(args.weight_path))
+        print_color("✅ Successfully loaded model weights!", "green")
+    else:
+        print_color("❌ No existing weights found. Training from scratch.", "red")
 
     opt = optim.Adam(net.parameters())
     loss_fun = nn.CrossEntropyLoss()
 
-    epoch = 1
-    while epoch < 200:
-        for i, (image, segment_image) in enumerate(tqdm.tqdm(data_loader)):
-            image, segment_image = image.to(device), segment_image.to(device) # 设备选择
-            # 前向传递
+    for epoch in range(1, args.epochs + 1):
+        print_color(f"Epoch [{epoch}/{args.epochs}]", "blue")
+        show_gpu_info()
+
+        loop = tqdm.tqdm(data_loader, desc="Training", ncols=100)
+        for i, (image, segment_image) in enumerate(loop):
+            image, segment_image = image.to(device), segment_image.to(device)
+
             out_image = net(image)
             train_loss = loss_fun(out_image, segment_image.long())
-            # 反向传播
+
             opt.zero_grad()
             train_loss.backward()
-
-            # 更新参数
             opt.step()
 
-            if i % 1 == 0:
-                print(f'{epoch}-{i}-train_loss===>>{train_loss.item()}')
-                # 原始图像
-                _image = image[0]  # (C, H, W)
-                # 分割标签（归一化）
-                _segment_image = segment_image[0].unsqueeze(0).float() / 3.0  # (1, H, W)
-                # 预测结果（归一化）
-                _out_image = torch.argmax(out_image[0], dim=0).unsqueeze(0).float() / 3.0  # (1, H, W)
-                # 拼接图像: 将3个单通道图像按通道堆叠为1个RGB图像
-                img = torch.cat([_segment_image, _out_image, _image[:1]], dim=0)  # (3, H, W)
-                # 确保路径存在
-                os.makedirs(save_path, exist_ok=True)
-                # 保存图像
-                save_image(img, f'{save_path}/{i}.png')
-        if epoch % 20 == 0:
-            torch.save(net.state_dict(), weight_path)
-            print('save successfully!')
-        epoch += 1
+            loop.set_postfix(loss=f"{train_loss.item():.5f}")
+
+            if i % args.save_interval == 0:
+                _image = image[0]
+                _segment_image = segment_image[0].unsqueeze(0).float() / 3.0
+                _out_image = torch.argmax(out_image[0], dim=0).unsqueeze(0).float() / 3.0
+                img = torch.cat([_segment_image, _out_image, _image[:1]], dim=0)
+
+                os.makedirs(args.save_path, exist_ok=True)
+                save_image(img, f'{args.save_path}/epoch{epoch}_batch{i}.png')
+
+        if epoch % args.checkpoint_interval == 0:
+            torch.save(net.state_dict(), args.weight_path)
+            print_color(f"💾 Model saved at epoch {epoch}!", "green")
+
+        print()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="UNet Training Script")
+    parser.add_argument('--num_classes', type=int, default=4, help='Number of output classes (include background)')
+    parser.add_argument('--batch_size', type=int, default=2, help='Batch size')
+    parser.add_argument('--epochs', type=int, default=200, help='Total number of training epochs')
+    parser.add_argument('--data_path', type=str, default='data', help='Path to dataset')
+    parser.add_argument('--weight_path', type=str, default='params/unet.pth', help='Path to save/load model weights')
+    parser.add_argument('--save_path', type=str, default='train_image', help='Path to save prediction images')
+    parser.add_argument('--save_interval', type=int, default=1, help='Interval (in batches) to save images')
+    parser.add_argument('--checkpoint_interval', type=int, default=20, help='Interval (in epochs) to save model checkpoint')
+
+    args = parser.parse_args()
+    main(args)
