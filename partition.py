@@ -39,7 +39,7 @@ def resize_image(image_path, max_size=1024):
     return resized_path
 
 
-def map_region_to_position(region_center, xr, yr, rr, xg, yg, rg, is_right_eye=True):
+def map_region_to_position(region_center, xr, yr, rr, xg, yg, rg, is_right_eye):
     """
     根据区域中心点的位置确定区域编号
     params:
@@ -57,6 +57,9 @@ def map_region_to_position(region_center, xr, yr, rr, xg, yg, rg, is_right_eye=T
     # 判断是否在虹膜圆上方或下方
     above_iris_center = y < yr
 
+    # 对6、11、3区间进行细分
+    dis_pupil_vertical = 2 * rg
+
     # 瞳孔切线内的区域
     if in_pupil_vertical:
         if above_iris_center:
@@ -68,14 +71,14 @@ def map_region_to_position(region_center, xr, yr, rr, xg, yg, rg, is_right_eye=T
     elif in_iris_vertical:
         if above_iris_center:
             if x < xr:  # 左侧
-                return 10 if is_right_eye else 8  # 肾（对调）
+                return 10 if is_right_eye else 8
             else:  # 右侧
-                return 8 if is_right_eye else 10  # 肾（对调）
+                return 8 if is_right_eye else 10
         else:
             if x < xr:  # 左侧
-                return 15 if is_right_eye else 2  # 脾（对调）
+                return 15 if is_right_eye else 2
             else:  # 右侧
-                return 2 if is_right_eye else 15  # 脾（对调）
+                return 2 if is_right_eye else 15
 
     # 虹膜切线外的区域
     else:
@@ -88,15 +91,33 @@ def map_region_to_position(region_center, xr, yr, rr, xg, yg, rg, is_right_eye=T
             elif x > xr + rr:  # 右侧
                 return 5 if is_right_eye else 13  # 心/胆（对调）
         elif y < yg - rg:  # 瞳孔上切线以上
-            if x < xr - rr:  # 左侧
-                return 11 if is_right_eye else 6  # 女子胞/乳（对调）
-            elif x > xr + rr:  # 右侧
-                return 6 if is_right_eye else 11  # 乳/女子胞（对调）
+            if xr - rr - dis_pupil_vertical < x < xr - rr:  # 左侧但是在中切线右边
+                return 11 if is_right_eye else 7  # 女子胞/肺（对调）
+            elif x < xr - rr - dis_pupil_vertical:  # 左侧但是在中切线左边
+                return 12 if is_right_eye else 6 # 肝/乳（对调）
+            elif xr + rr < x < xr + rr + dis_pupil_vertical:  # 右侧但是在中切线左侧
+                return 7 if is_right_eye else 11  # 肺/女子胞（对调）
+            elif x > xr + rr + dis_pupil_vertical:  # 右侧但是在中切线右侧
+                return 6 if is_right_eye else 12  # 乳/肝（对调）
         elif y > yg + rg:  # 瞳孔下切线以下
-            if x < xr - rr:  # 左侧
-                return 14 if is_right_eye else 3  # 肝/大肠（对调）
-            elif x > xr + rr:  # 右侧
-                return 3 if is_right_eye else 14  # 大肠/肝（对调）
+            if not is_right_eye:
+                if xr - rr - dis_pupil_vertical < x < xr - rr:
+                    return 3 # 大肠
+                elif x < xr - rr - dis_pupil_vertical:
+                    return 4 # 小肠
+                elif x > xr + rr:
+                    return 14 # 肝
+            else:
+                if x < xr - rr:
+                    return 14 # 肝
+                elif xr + rr < x < xr + rr + dis_pupil_vertical:
+                    return 3 # 大肠
+                elif x > xr + rr + dis_pupil_vertical:
+                    return 4 # 小肠
+            # if x < xr - rr:  # 左侧
+            #     return 14 if is_right_eye else 3  # 肝/大肠（对调）
+            # elif x > xr + rr:  # 右侧
+            #     return 3 if is_right_eye else 14  # 大肠/肝（对调）
 
     return None  # 其他区域暂不处理
 
@@ -163,6 +184,11 @@ def draw_region(image_path, point_x=None, point_y=None, is_right_eye=True):
         center = (int(xr), int(yr))
         radius = int(rr)
 
+        # 找到最大的绿色轮廓
+        largest_green = max(green_contours, key=cv2.contourArea)
+        (xg, yg), rg = cv2.minEnclosingCircle(largest_green)
+        xg, yg, rg = int(xg), int(yg), int(rg)
+
         # 使用黑色绘制圆
         cv2.circle(output_image, center, radius, (0, 0, 0), 2)
 
@@ -172,17 +198,29 @@ def draw_region(image_path, point_x=None, point_y=None, is_right_eye=True):
             'right': xr + rr,
             'center_y': yr
         })
+        if not is_right_eye:
+            # 绘制切线
+            draw_limited_line((xr - rr, 0), (xr - rr, height))  # 左切线
+            draw_limited_line((xr + rr, 0), (xr + rr, height))  # 右切线
 
-        # 绘制切线
-        draw_limited_line((xr - rr, 0), (xr - rr, height))  # 左切线
-        draw_limited_line((xr + rr, 0), (xr + rr, height))  # 右切线
+            # 绘制巩膜的细分区间
+            draw_limited_line((xr - rr - 2 * rg, 0), (xr - rr - 2 * rg, height))  # 左切线左侧
+            draw_limited_line((xr + rr + 2 * rg, 0), (xr + rr + 2 * rg, yg - rg)) # 右切线右侧
+        else:
+            # 绘制切线
+            draw_limited_line((xr - rr, 0), (xr - rr, height))  # 左切线
+            draw_limited_line((xr + rr, 0), (xr + rr, height))  # 右切线
+
+            # 绘制巩膜的细分区间
+            draw_limited_line((xr - rr - 2 * rg, yg - rg), (xr - rr - 2 * rg, 0))  # 左切线左侧
+            draw_limited_line((xr + rr + 2 * rg, 0), (xr + rr + 2 * rg, height)) # 右切线右侧
 
     # 处理绿色区域（瞳孔）- 只处理最大区域
     if green_contours and iris_boundaries:
         # 找到最大的绿色轮廓
-        largest_green = max(green_contours, key=cv2.contourArea)
-        (xg, yg), rg = cv2.minEnclosingCircle(largest_green)
-        xg, yg, rg = int(xg), int(yg), int(rg)
+        # largest_green = max(green_contours, key=cv2.contourArea)
+        # (xg, yg), rg = cv2.minEnclosingCircle(largest_green)
+        # xg, yg, rg = int(xg), int(yg), int(rg)
 
         iris = iris_boundaries[0]  # 使用最大虹膜的边界
 
@@ -286,7 +324,7 @@ def draw_region(image_path, point_x=None, point_y=None, is_right_eye=True):
     for i in range(1, num_labels):
         # 将所有非背景区域填充为白色
         output_image[labels == i] = [255, 255, 255]
-        
+
         # 只在有效区域上添加编号
         if i in valid_labels:
             center_x = int(centroids[i][0])
@@ -361,7 +399,7 @@ def draw_region(image_path, point_x=None, point_y=None, is_right_eye=True):
 
 def main():
     img_path = 'result/result/042.jpg'
-    draw_region(img_path, point_x=200, point_y=350, is_right_eye=False)
+    draw_region(img_path, point_x=700, point_y=400, is_right_eye=False)
 
 
 if __name__ == '__main__':
