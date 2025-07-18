@@ -204,7 +204,8 @@ def draw_region(image_path, point_x=None, point_y=None, is_right_eye=True):
             draw_limited_line((xr + rr, 0), (xr + rr, height))  # 右切线
 
             # 绘制巩膜的细分区间
-            draw_limited_line((xr - rr - 2 * rg, 0), (xr - rr - 2 * rg, height))  # 左切线左侧
+            draw_limited_line((xr - rr - 2 * rg, 0), (xr - rr - 2 * rg, yg - rg))  # 左切线左侧上半部分
+            draw_limited_line((xr - rr - 2 * rg, yg + rg), (xr - rr - 2 * rg, height))  # 左切线左侧下半部分
             draw_limited_line((xr + rr + 2 * rg, 0), (xr + rr + 2 * rg, yg - rg)) # 右切线右侧
         else:
             # 绘制切线
@@ -213,7 +214,8 @@ def draw_region(image_path, point_x=None, point_y=None, is_right_eye=True):
 
             # 绘制巩膜的细分区间
             draw_limited_line((xr - rr - 2 * rg, yg - rg), (xr - rr - 2 * rg, 0))  # 左切线左侧
-            draw_limited_line((xr + rr + 2 * rg, 0), (xr + rr + 2 * rg, height)) # 右切线右侧
+            draw_limited_line((xr + rr + 2 * rg, 0), (xr + rr + 2 * rg, yg - rg)) # 右切线右侧上半部分
+            draw_limited_line((xr + rr + 2 * rg, yg + rg), (xr + rr + 2 * rg, height)) # 右切线右侧下半部分
 
     # 处理绿色区域（瞳孔）- 只处理最大区域
     if green_contours and iris_boundaries:
@@ -398,8 +400,8 @@ def draw_region(image_path, point_x=None, point_y=None, is_right_eye=True):
 
 
 def main():
-    img_path = 'result/result/042.jpg'
-    draw_region(img_path, point_x=700, point_y=400, is_right_eye=False)
+    img_path = 'result/result/011.jpg'
+    draw_region(img_path, point_x=700, point_y=400, is_right_eye=True)
 
 
 if __name__ == '__main__':
