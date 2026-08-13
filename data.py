@@ -26,8 +26,8 @@ class MyDataset(Dataset):
 
     def __getitem__(self, index):
         # 获取当前图片名
-        image_name = self.image_names[index]  # 例如 "000001.jpg"
-        base_name = os.path.splitext(image_name)[0]  # 获取基名 "000001"
+        image_name = self.image_names[index]  
+        base_name = os.path.splitext(image_name)[0] 
 
         # 构建路径
         image_path = os.path.join(self.path, 'JPEGImages', image_name)

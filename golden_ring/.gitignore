@@ -1,0 +1,4 @@
+outputs/
+predict_results/
+__pycache__/
+*.py[cod]

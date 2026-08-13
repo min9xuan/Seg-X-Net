@@ -112,9 +112,9 @@ def evaluate_metrics(output, label, num_classes):
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     weight_path = 'params/unet.pth'
-    image_dir = 'data/test/image'
+    image_dir = 'D:/AAA_git_myrepo/datasets/bzy_sclera/data/train/input_rgb'
     label_dir = 'data/test/labels'
-    result_path = 'test_result'
+    result_path = 'test_result_pupil'
 
     # 定义测试集和网络
     num_classes = 4  # 包括背景
